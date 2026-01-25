@@ -39,7 +39,9 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
-  async createRefreshToken(tokenData: Partial<RefreshToken>): Promise<RefreshToken> {
+  async createRefreshToken(
+    tokenData: Partial<RefreshToken>,
+  ): Promise<RefreshToken> {
     const refreshToken = this.refreshTokenRepository.create(tokenData);
     return this.refreshTokenRepository.save(refreshToken);
   }
@@ -52,9 +54,6 @@ export class UserService {
   }
 
   async invalidateRefreshToken(token: string): Promise<void> {
-    await this.refreshTokenRepository.update(
-      { token },
-      { isActive: false }
-    );
+    await this.refreshTokenRepository.update({ token }, { isActive: false });
   }
 }

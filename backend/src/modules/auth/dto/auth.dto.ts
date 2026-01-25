@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, Length, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, Length, Matches } from 'class-validator';
 
 export class ChallengeDto {
   @IsString()

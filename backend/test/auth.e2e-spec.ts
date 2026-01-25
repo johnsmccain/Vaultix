@@ -1,36 +1,51 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import supertest from 'supertest';
-import { AppModule } from '../src/app.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../src/modules/user/entities/user.entity';
-import { RefreshToken } from '../src/modules/user/entities/refresh-token.entity';
+import { AppModule } from './../src/app.module';
 import * as StellarSdk from 'stellar-sdk';
 
-describe('Authentication (e2e)', () => {
+interface ChallengeResponse {
+  nonce: string;
+  message: string;
+}
+
+interface TokenResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface UserResponse {
+  id: string;
+  walletAddress: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let testKeypair: StellarSdk.Keypair;
   let testWalletAddress: string;
+  let accessToken: string;
 
   beforeAll(async () => {
-    // Generate a test keypair
-    testKeypair = StellarSdk.Keypair.random();
-    testWalletAddress = testKeypair.publicKey();
-
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        AppModule,
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          entities: [User, RefreshToken],
-          synchronize: true,
-        }),
-      ],
+      imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
     await app.init();
+
+    // Generate a random keypair for testing
+    testKeypair = StellarSdk.Keypair.random();
+    testWalletAddress = testKeypair.publicKey();
   });
 
   afterAll(async () => {
@@ -44,10 +59,11 @@ describe('Authentication (e2e)', () => {
         .send({ walletAddress: testWalletAddress })
         .expect(200);
 
-      expect(response.body).toHaveProperty('nonce');
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toContain(response.body.nonce);
-      expect(response.body.nonce).toMatch(/^[a-f0-9]{32}$/);
+      const body = response.body as ChallengeResponse;
+      expect(body).toHaveProperty('nonce');
+      expect(body).toHaveProperty('message');
+      expect(body.message).toContain(body.nonce);
+      expect(body.nonce).toMatch(/^[a-f0-9]{32}$/);
     });
 
     it('should return 400 for invalid wallet address', async () => {
@@ -66,8 +82,8 @@ describe('Authentication (e2e)', () => {
         .send({ walletAddress: testWalletAddress })
         .expect(200);
 
-      const message = challengeResponse.body.message;
-      const signature = testKeypair.sign(message).toString('hex');
+      const message = (challengeResponse.body as ChallengeResponse).message;
+      const signature = testKeypair.sign(Buffer.from(message)).toString('hex');
 
       const response = await supertest(app.getHttpServer())
         .post('/auth/verify')
@@ -78,10 +94,11 @@ describe('Authentication (e2e)', () => {
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty('accessToken');
-      expect(response.body).toHaveProperty('refreshToken');
-      expect(response.body.accessToken).toBeDefined();
-      expect(response.body.refreshToken).toBeDefined();
+      const body = response.body as TokenResponse;
+      expect(body).toHaveProperty('accessToken');
+      expect(body).toHaveProperty('refreshToken');
+      expect(body.accessToken).toBeDefined();
+      expect(body.refreshToken).toBeDefined();
     });
 
     it('should return 401 for invalid signature', async () => {
@@ -97,8 +114,6 @@ describe('Authentication (e2e)', () => {
   });
 
   describe('/auth/me (GET)', () => {
-    let accessToken: string;
-
     beforeEach(async () => {
       // Get a valid access token
       const challengeResponse = await supertest(app.getHttpServer())
@@ -106,8 +121,8 @@ describe('Authentication (e2e)', () => {
         .send({ walletAddress: testWalletAddress })
         .expect(200);
 
-      const message = challengeResponse.body.message;
-      const signature = testKeypair.sign(message).toString('hex');
+      const message = (challengeResponse.body as ChallengeResponse).message;
+      const signature = testKeypair.sign(Buffer.from(message)).toString('hex');
 
       const verifyResponse = await supertest(app.getHttpServer())
         .post('/auth/verify')
@@ -118,7 +133,7 @@ describe('Authentication (e2e)', () => {
         })
         .expect(200);
 
-      accessToken = verifyResponse.body.accessToken;
+      accessToken = (verifyResponse.body as TokenResponse).accessToken;
     });
 
     it('should return current user with valid token', async () => {
@@ -127,18 +142,17 @@ describe('Authentication (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('walletAddress');
-      expect(response.body).toHaveProperty('isActive');
-      expect(response.body).toHaveProperty('createdAt');
-      expect(response.body.walletAddress).toBe(testWalletAddress);
-      expect(response.body.isActive).toBe(true);
+      const body = response.body as UserResponse;
+      expect(body).toHaveProperty('id');
+      expect(body).toHaveProperty('walletAddress');
+      expect(body).toHaveProperty('isActive');
+      expect(body).toHaveProperty('createdAt');
+      expect(body.walletAddress).toBe(testWalletAddress);
+      expect(body.isActive).toBe(true);
     });
 
     it('should return 401 without token', async () => {
-      await supertest(app.getHttpServer())
-        .get('/auth/me')
-        .expect(401);
+      await supertest(app.getHttpServer()).get('/auth/me').expect(401);
     });
 
     it('should return 401 with invalid token', async () => {

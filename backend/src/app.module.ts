@@ -17,7 +17,10 @@ import { RefreshToken } from './modules/user/entities/refresh-token.entity';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'sqlite',
-        database: configService.get<string>('DATABASE_PATH', './data/vaultix.db'),
+        database: configService.get<string>(
+          'DATABASE_PATH',
+          './data/vaultix.db',
+        ),
         entities: [User, RefreshToken],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),

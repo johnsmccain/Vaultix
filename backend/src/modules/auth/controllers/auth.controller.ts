@@ -1,7 +1,22 @@
-import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { Request } from 'express';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from '../services/auth.service';
-import { ChallengeDto, VerifyDto, RefreshTokenDto, LogoutDto } from '../dto/auth.dto';
+import {
+  ChallengeDto,
+  VerifyDto,
+  RefreshTokenDto,
+  LogoutDto,
+} from '../dto/auth.dto';
 import { AuthGuard } from '../middleware/auth.guard';
 
 @Controller('auth')
@@ -33,7 +48,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(AuthGuard)
-  async getCurrentUser(@Req() req: any) {
+  async getCurrentUser(@Req() req: Request & { user: { userId: string } }) {
     const user = await this.authService.getCurrentUser(req.user.userId);
     return {
       id: user.id,
