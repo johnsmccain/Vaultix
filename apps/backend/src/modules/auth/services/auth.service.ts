@@ -4,7 +4,20 @@ import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 import { User } from '../../user/entities/user.entity';
 import { UserService } from '../../user/user.service';
-import * as StellarSdk from 'stellar-sdk';
+
+// Stellar SDK types for signature verification
+interface StellarKeypair {
+  verify(data: Buffer, signature: Buffer): boolean;
+}
+
+interface StellarSdkModule {
+  Keypair: {
+    fromPublicKey(publicKey: string): StellarKeypair;
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const StellarSdk: StellarSdkModule = require('stellar-sdk') as StellarSdkModule;
 
 @Injectable()
 export class AuthService {
