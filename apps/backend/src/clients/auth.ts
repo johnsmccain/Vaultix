@@ -5,7 +5,7 @@ export const login = async (email: string, password: string) => {
   const response = await api.post('/auth/login', { email, password });
 
   const { accessToken, refreshToken } = response.data;
-
+// TODO: Handle token storage and expiration properly
   setTokens(accessToken, refreshToken);
 
   return response.data;

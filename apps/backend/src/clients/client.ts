@@ -2,6 +2,14 @@ import axios, { AxiosError } from 'axios';
 import { getAccessToken, getRefreshToken, setTokens, } from '../utils/token';
 import { clearTokens } from '../utils/token';
 
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      VITE_API_URL?: string;
+    }
+  }
+}
+
 const api = axios.create({
   baseURL: process.env.VITE_API_URL || 'http://localhost:3000',
   withCredentials: true,
