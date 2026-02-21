@@ -20,6 +20,7 @@ const EscrowDetailPage = () => {
   const { escrow, loading, error } = useEscrow(id as string);
   const { connected, publicKey, connect } = useWallet(); // Assuming wallet hook exists
   const [userRole, setUserRole] = useState<'creator' | 'counterparty' | null>(null);
+  const [disputeOpen, setDisputeOpen] = useState(false);
 
   useEffect(() => {
     if (escrow && publicKey) {
@@ -58,7 +59,6 @@ const EscrowDetailPage = () => {
       </div>
     );
   }
-const [disputeOpen, setDisputeOpen] = useState(false);
 
   if (!escrow) {
     return (

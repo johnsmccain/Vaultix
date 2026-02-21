@@ -17,9 +17,6 @@ interface FileDisputeModalProps {
   onClose: () => void;
   escrowId: string;
 }
-const [disputeOpen, setDisputeOpen] = useState(false);
-
- 
 
 const disputeReasons = [
   { value: "DELIVERY_ISSUE", label: "Delivery Issue" },
