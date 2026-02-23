@@ -11,15 +11,17 @@ import { AuthModule } from '../auth/auth.module';
 import { EscrowModule } from '../escrow/escrow.module';
 import { ConsistencyCheckerService } from './services/consistency-checker.service';
 import { AdminEscrowConsistencyController } from './controllers/admin-escrow-consistency.controller';
+import { AdminAuditLog } from './entities/admin-audit-log.entity';
+import { AdminAuditLogService } from './services/admin-audit-log.service';
 
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([User, Escrow, Party, EscrowEvent]),
+    TypeOrmModule.forFeature([User, Escrow, Party, EscrowEvent, AdminAuditLog]),
     EscrowModule,
   ],
   controllers: [AdminController, AdminEscrowConsistencyController],
-  providers: [AdminService, ConsistencyCheckerService],
+  providers: [AdminService, ConsistencyCheckerService, AdminAuditLogService],
   exports: [AdminService],
 })
 export class AdminModule {}
