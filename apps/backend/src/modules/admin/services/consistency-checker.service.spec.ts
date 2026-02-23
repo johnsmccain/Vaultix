@@ -2,11 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConsistencyCheckerService } from './consistency-checker.service';
 import { EscrowService } from '../../escrow/services/escrow.service';
 import { EscrowStatus, EscrowType } from '../../escrow/entities/escrow.entity';
+import { UserRole } from 'src/modules/user/entities/user-role.enum';
 
 describe('ConsistencyCheckerService', () => {
   let service: ConsistencyCheckerService;
   let escrowService: jest.Mocked<EscrowService>;
-  let originalConsoleError: typeof console.error;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,7 +20,6 @@ describe('ConsistencyCheckerService', () => {
         },
       ],
     }).compile();
-
     service = module.get<ConsistencyCheckerService>(ConsistencyCheckerService);
     escrowService = module.get(EscrowService);
   });
@@ -45,7 +44,14 @@ describe('ConsistencyCheckerService', () => {
       status: EscrowStatus.ACTIVE,
       type: EscrowType.STANDARD,
       creatorId: 'mock-creator',
-      creator: {} as any,
+      creator: {
+        id: 'mock-user-id',
+        walletAddress: 'mock-wallet',
+        isActive: true,
+        role: UserRole.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
       releaseTransactionHash: undefined,
       isReleased: false,
       expiresAt: undefined,
@@ -59,9 +65,12 @@ describe('ConsistencyCheckerService', () => {
     });
     // Patch the service to simulate on-chain fetch returns same
     jest
-      .spyOn(service as any, 'checkConsistency')
-      .mockImplementationOnce(async (request) => {
-        return {
+      .spyOn(
+        service as unknown as { checkConsistency: () => Promise<unknown> },
+        'checkConsistency',
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve({
           reports: [{ escrowId: 1, isConsistent: true, fieldsMismatched: [] }],
           summary: {
             totalChecked: 1,
@@ -70,8 +79,8 @@ describe('ConsistencyCheckerService', () => {
             totalMissingOnChain: 0,
             totalErrored: 0,
           },
-        };
-      });
+        }),
+      );
     const result = await service.checkConsistency({ escrowIds: [1] });
     expect(result.reports[0].isConsistent).toBe(true);
   });
@@ -86,7 +95,14 @@ describe('ConsistencyCheckerService', () => {
       status: EscrowStatus.ACTIVE,
       type: EscrowType.STANDARD,
       creatorId: 'mock-creator',
-      creator: {} as any,
+      creator: {
+        id: 'mock-user-id',
+        walletAddress: 'mock-wallet',
+        isActive: true,
+        role: UserRole.USER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
       releaseTransactionHash: undefined,
       isReleased: false,
       expiresAt: undefined,
@@ -99,9 +115,12 @@ describe('ConsistencyCheckerService', () => {
       updatedAt: new Date(),
     });
     jest
-      .spyOn(service as any, 'checkConsistency')
-      .mockImplementationOnce(async (request) => {
-        return {
+      .spyOn(
+        service as unknown as { checkConsistency: () => Promise<unknown> },
+        'checkConsistency',
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve({
           reports: [
             {
               escrowId: 1,
@@ -122,8 +141,8 @@ describe('ConsistencyCheckerService', () => {
             totalMissingOnChain: 0,
             totalErrored: 0,
           },
-        };
-      });
+        }),
+      );
     const result = await service.checkConsistency({ escrowIds: [1] });
     expect(result.reports[0].fieldsMismatched.length).toBeGreaterThan(0);
   });

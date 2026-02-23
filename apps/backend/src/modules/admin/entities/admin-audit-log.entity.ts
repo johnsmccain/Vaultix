@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('admin_audit_log')
 export class AdminAuditLog {
@@ -18,7 +23,7 @@ export class AdminAuditLog {
   resourceId: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  metadata: Record<string, any>;
+  metadata?: Record<string, unknown>;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

@@ -34,7 +34,9 @@ describe('AdminService (audit log integration)', () => {
   it('should log audit entry on suspendUser', async () => {
     const user = { id: 'user-1', isActive: true, role: 'ADMIN' } as User;
     jest.spyOn(userRepo, 'findOne').mockResolvedValue(user);
-    jest.spyOn(userRepo, 'save').mockResolvedValue({ ...user, isActive: false });
+    jest
+      .spyOn(userRepo, 'save')
+      .mockResolvedValue({ ...user, isActive: false });
     const auditSpy = jest.spyOn(auditLogService, 'create');
     await service.suspendUser('user-1', 'admin-1');
     expect(auditSpy).toHaveBeenCalledWith(
@@ -43,7 +45,7 @@ describe('AdminService (audit log integration)', () => {
         actionType: 'SUSPEND_USER',
         resourceType: 'USER',
         resourceId: 'user-1',
-      })
+      }),
     );
   });
 });

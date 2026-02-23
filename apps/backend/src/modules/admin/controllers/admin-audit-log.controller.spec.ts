@@ -41,7 +41,16 @@ describe('AdminController (audit log endpoint)', () => {
 
   it('should call auditLogService.findAll with filters', async () => {
     const spy = jest.spyOn(auditLogService, 'findAll');
-    await controller.getAuditLogs('admin-1', 'SUSPEND_USER', 'USER', 'user-123', undefined, undefined, '1', '10');
+    await controller.getAuditLogs(
+      'admin-1',
+      'SUSPEND_USER',
+      'USER',
+      'user-123',
+      undefined,
+      undefined,
+      '1',
+      '10',
+    );
     expect(spy).toHaveBeenCalledWith({
       actorId: 'admin-1',
       actionType: 'SUSPEND_USER',

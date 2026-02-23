@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions } from 'typeorm';
+import {
+  Repository,
+  FindManyOptions,
+  FindOptionsWhere,
+  Between,
+} from 'typeorm';
 import { AdminAuditLog } from '../entities/admin-audit-log.entity';
 
 export interface CreateAuditLogDto {
@@ -8,7 +13,18 @@ export interface CreateAuditLogDto {
   actionType: string;
   resourceType: string;
   resourceId?: string | null;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AuditLogFilters {
+  actorId?: string;
+  actionType?: string;
+  resourceType?: string;
+  resourceId?: string;
+  from?: Date;
+  to?: Date;
+  page?: number;
+  pageSize?: number;
 }
 
 @Injectable()
@@ -28,16 +44,7 @@ export class AdminAuditLogService {
   }
 
   async findAll(
-    filters: {
-      actorId?: string;
-      actionType?: string;
-      resourceType?: string;
-      resourceId?: string;
-      from?: Date;
-      to?: Date;
-      page?: number;
-      pageSize?: number;
-    } = {},
+    filters: AuditLogFilters = {},
   ): Promise<{ data: AdminAuditLog[]; total: number }> {
     const {
       actorId,
@@ -49,16 +56,20 @@ export class AdminAuditLogService {
       page = 1,
       pageSize = 20,
     } = filters;
-    const where: any = {};
+
+    const where: FindOptionsWhere<AdminAuditLog> = {};
     if (actorId) where.actorId = actorId;
     if (actionType) where.actionType = actionType;
     if (resourceType) where.resourceType = resourceType;
     if (resourceId) where.resourceId = resourceId;
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt['$gte'] = from;
-      if (to) where.createdAt['$lte'] = to;
+    if (from && to) {
+      where.createdAt = Between(from, to);
+    } else if (from) {
+      where.createdAt = Between(from, new Date());
+    } else if (to) {
+      where.createdAt = Between(new Date(0), to);
     }
+
     const [data, total] = await this.auditLogRepo.findAndCount({
       where,
       order: { createdAt: 'DESC' },
