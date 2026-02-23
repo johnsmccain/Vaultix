@@ -15,8 +15,8 @@ export class StellarEventController {
   ) {}
 
   @Get('status')
-  async getSyncStatus() {
-    return await this.stellarEventListenerService.getSyncStatus();
+  getSyncStatus() {
+    return this.stellarEventListenerService.getSyncStatus();
   }
 
   @Post('sync')

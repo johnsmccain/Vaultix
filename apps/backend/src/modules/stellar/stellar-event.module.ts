@@ -7,10 +7,7 @@ import { StellarEventListenerService } from './services/stellar-event-listener.s
 import { StellarEventController } from './controllers/stellar-event.controller';
 
 @Module({
-  imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([StellarEvent, Escrow]),
-  ],
+  imports: [ConfigModule, TypeOrmModule.forFeature([StellarEvent, Escrow])],
   controllers: [StellarEventController],
   providers: [StellarEventListenerService],
   exports: [StellarEventListenerService],

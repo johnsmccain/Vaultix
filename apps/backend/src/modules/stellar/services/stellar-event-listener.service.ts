@@ -1,9 +1,19 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Horizon } from '@stellar/stellar-sdk';
-import { StellarEvent, StellarEventType } from '../entities/stellar-event.entity';
+import {
+  StellarEvent,
+  StellarEventType,
+} from '../entities/stellar-event.entity';
 import { Escrow, EscrowStatus } from '../../escrow/entities/escrow.entity';
 
 @Injectable()
@@ -28,9 +38,11 @@ export class StellarEventListenerService implements OnModuleInit {
   async onModuleInit() {
     const contractId = this.configService.get<string>('STELLAR_CONTRACT_ID');
     const rpcUrl = this.configService.get<string>('STELLAR_RPC_URL');
-    
+
     if (!contractId || !rpcUrl) {
-      this.logger.error('Missing required configuration: STELLAR_CONTRACT_ID or STELLAR_RPC_URL');
+      this.logger.error(
+        'Missing required configuration: STELLAR_CONTRACT_ID or STELLAR_RPC_URL',
+      );
       return;
     }
 
@@ -46,12 +58,14 @@ export class StellarEventListenerService implements OnModuleInit {
     }
 
     this.isRunning = true;
-    this.logger.log(`Starting Stellar event listener for contract: ${this.contractId}`);
+    this.logger.log(
+      `Starting Stellar event listener for contract: ${this.contractId}`,
+    );
 
     try {
       // Get the last processed ledger from database
       await this.initializeLastProcessedLedger();
-      
+
       // Start the event polling loop
       await this.pollEvents();
     } catch (error) {
@@ -76,7 +90,10 @@ export class StellarEventListenerService implements OnModuleInit {
       this.logger.log(`Resuming from ledger: ${this.lastProcessedLedger}`);
     } else {
       // Start from a configurable ledger or current
-      const startLedger = this.configService.get<number>('STELLAR_START_LEDGER', 0);
+      const startLedger = this.configService.get<number>(
+        'STELLAR_START_LEDGER',
+        0,
+      );
       this.lastProcessedLedger = startLedger;
       this.logger.log(`Starting from ledger: ${this.lastProcessedLedger}`);
     }
@@ -95,21 +112,26 @@ export class StellarEventListenerService implements OnModuleInit {
   }
 
   private async processNewEvents() {
-    const latestLedger = await (this.server as any).latestLedger();
-    
+    const latestLedger = await this.server.latestLedger();
+
     if (latestLedger.sequence <= this.lastProcessedLedger) {
       return; // No new ledgers to process
     }
 
-    this.logger.debug(`Processing ledgers ${this.lastProcessedLedger + 1} to ${latestLedger.sequence}`);
+    this.logger.debug(
+      `Processing ledgers ${this.lastProcessedLedger + 1} to ${latestLedger.sequence}`,
+    );
 
     // Process events in batches to avoid overwhelming the system
     const batchSize = 100;
     let currentLedger = this.lastProcessedLedger + 1;
 
     while (currentLedger <= latestLedger.sequence && this.isRunning) {
-      const endLedger = Math.min(currentLedger + batchSize - 1, latestLedger.sequence);
-      
+      const endLedger = Math.min(
+        currentLedger + batchSize - 1,
+        latestLedger.sequence,
+      );
+
       await this.processLedgerRange(currentLedger, endLedger);
       currentLedger = endLedger + 1;
     }
@@ -120,23 +142,30 @@ export class StellarEventListenerService implements OnModuleInit {
   private async processLedgerRange(startLedger: number, endLedger: number) {
     try {
       const events = await this.getEventsForLedgerRange(startLedger, endLedger);
-      
+
       for (const event of events) {
         await this.processEvent(event);
       }
     } catch (error) {
-      this.logger.error(`Error processing ledger range ${startLedger}-${endLedger}:`, error);
+      this.logger.error(
+        `Error processing ledger range ${startLedger}-${endLedger}:`,
+        error,
+      );
     }
   }
 
-  private async getEventsForLedgerRange(startLedger: number, endLedger: number) {
+  private async getEventsForLedgerRange(
+    startLedger: number,
+    endLedger: number,
+  ) {
     // This would use the actual Stellar SDK to get events
     // For now, we'll simulate the structure
     const events: any[] = [];
-    
+
     try {
       // Get events for the contract in the ledger range
-      const ledgerPage = await (this.server as any).ledgers()
+      const ledgerPage = await this.server
+        .ledgers()
         .cursor(startLedger.toString())
         .limit(endLedger - startLedger + 1)
         .call();
@@ -147,7 +176,10 @@ export class StellarEventListenerService implements OnModuleInit {
         events.push(...contractEvents);
       }
     } catch (error) {
-      this.logger.error(`Failed to get events for range ${startLedger}-${endLedger}:`, error);
+      this.logger.error(
+        `Failed to get events for range ${startLedger}-${endLedger}:`,
+        error,
+      );
     }
 
     return events;
@@ -162,12 +194,12 @@ export class StellarEventListenerService implements OnModuleInit {
       // Simulate finding contract events in the ledger
       // This would need to be implemented with actual Stellar SDK calls
       const transactions = ledger.transactions || [];
-      
+
       for (const tx of transactions) {
         if (tx.resultMeta && tx.resultMeta.events) {
           for (let i = 0; i < tx.resultMeta.events.length; i++) {
             const event = tx.resultMeta.events[i];
-            
+
             // Check if this event is from our contract
             if (this.isContractEvent(event)) {
               events.push({
@@ -191,15 +223,18 @@ export class StellarEventListenerService implements OnModuleInit {
   private isContractEvent(event: any): boolean {
     // Check if the event is from our contract
     // This would need to be implemented based on actual event structure
-    return event.contractId === this.contractId || 
-           (event.type && event.type.includes('contract') && 
-            event.contractId === this.contractId);
+    return (
+      event.contractId === this.contractId ||
+      (event.type &&
+        event.type.includes('contract') &&
+        event.contractId === this.contractId)
+    );
   }
 
   private async processEvent(eventData: any) {
     try {
       const { txHash, eventIndex, event, ledger, timestamp } = eventData;
-      
+
       // Check for idempotency
       const existingEvent = await this.stellarEventRepository.findOne({
         where: { txHash, eventIndex },
@@ -211,17 +246,28 @@ export class StellarEventListenerService implements OnModuleInit {
       }
 
       // Parse and normalize the event
-      const normalizedEvent = await this.normalizeEvent(event, txHash, eventIndex, ledger, timestamp);
-      
+      const normalizedEvent = await this.normalizeEvent(
+        event,
+        txHash,
+        eventIndex,
+        ledger,
+        timestamp,
+      );
+
       // Save the normalized event
       await this.stellarEventRepository.save(normalizedEvent);
 
       // Update related escrow records
       await this.updateEscrowFromEvent(normalizedEvent);
 
-      this.logger.debug(`Processed event: ${normalizedEvent.eventType} for escrow: ${normalizedEvent.escrowId}`);
+      this.logger.debug(
+        `Processed event: ${normalizedEvent.eventType} for escrow: ${normalizedEvent.escrowId}`,
+      );
     } catch (error) {
-      this.logger.error(`Error processing event ${eventData.txHash}:${eventData.eventIndex}:`, error);
+      this.logger.error(
+        `Error processing event ${eventData.txHash}:${eventData.eventIndex}:`,
+        error,
+      );
     }
   }
 
@@ -256,7 +302,7 @@ export class StellarEventListenerService implements OnModuleInit {
   private mapEventType(event: any): StellarEventType {
     // Map Stellar contract events to our internal event types
     const eventName = event.type || event.name || event.topic;
-    
+
     switch (eventName) {
       case 'escrow_created':
         return StellarEventType.ESCROW_CREATED;
@@ -278,52 +324,56 @@ export class StellarEventListenerService implements OnModuleInit {
     }
   }
 
-  private extractEventFields(event: any, eventType: StellarEventType): Record<string, any> {
+  private extractEventFields(
+    event: Record<string, any>,
+    eventType: StellarEventType,
+  ): Record<string, any> {
     const fields: Record<string, any> = {};
 
     try {
       // Extract common fields based on event type
       switch (eventType) {
         case StellarEventType.ESCROW_CREATED:
-          fields.escrowId = event.body.escrow_id || event.value?.escrow_id;
-          fields.amount = event.body.amount || event.value?.amount;
-          fields.asset = event.body.asset || event.value?.asset;
-          fields.fromAddress = event.body.creator || event.value?.creator;
+          fields.escrowId = event.body?.escrow_id || event.value?.escrow_id;
+          fields.amount = event.body?.amount || event.value?.amount;
+          fields.asset = event.body?.asset || event.value?.asset;
+          fields.fromAddress = event.body?.creator || event.value?.creator;
           break;
 
         case StellarEventType.ESCROW_FUNDED:
-          fields.escrowId = event.body.escrow_id || event.value?.escrow_id;
-          fields.amount = event.body.amount || event.value?.amount;
-          fields.asset = event.body.asset || event.value?.asset;
-          fields.fromAddress = event.body.funder || event.value?.funder;
+          fields.escrowId = event.body?.escrow_id || event.value?.escrow_id;
+          fields.amount = event.body?.amount || event.value?.amount;
+          fields.asset = event.body?.asset || event.value?.asset;
+          fields.fromAddress = event.body?.funder || event.value?.funder;
           break;
 
         case StellarEventType.MILESTONE_RELEASED:
-          fields.escrowId = event.body.escrow_id || event.value?.escrow_id;
-          fields.milestoneIndex = event.body.milestone_index || event.value?.milestone_index;
-          fields.amount = event.body.amount || event.value?.amount;
-          fields.toAddress = event.body.recipient || event.value?.recipient;
+          fields.escrowId = event.body?.escrow_id || event.value?.escrow_id;
+          fields.milestoneIndex =
+            event.body?.milestone_index || event.value?.milestone_index;
+          fields.amount = event.body?.amount || event.value?.amount;
+          fields.toAddress = event.body?.recipient || event.value?.recipient;
           break;
 
         case StellarEventType.ESCROW_COMPLETED:
-          fields.escrowId = event.body.escrow_id || event.value?.escrow_id;
-          fields.toAddress = event.body.recipient || event.value?.recipient;
+          fields.escrowId = event.body?.escrow_id || event.value?.escrow_id;
+          fields.toAddress = event.body?.recipient || event.value?.recipient;
           break;
 
         case StellarEventType.ESCROW_CANCELLED:
-          fields.escrowId = event.body.escrow_id || event.value?.escrow_id;
-          fields.reason = event.body.reason || event.value?.reason;
+          fields.escrowId = event.body?.escrow_id || event.value?.escrow_id;
+          fields.reason = event.body?.reason || event.value?.reason;
           break;
 
         case StellarEventType.DISPUTE_CREATED:
-          fields.escrowId = event.body.escrow_id || event.value?.escrow_id;
-          fields.fromAddress = event.body.disputant || event.value?.disputant;
-          fields.reason = event.body.reason || event.value?.reason;
+          fields.escrowId = event.body?.escrow_id || event.value?.escrow_id;
+          fields.fromAddress = event.body?.disputant || event.value?.disputant;
+          fields.reason = event.body?.reason || event.value?.reason;
           break;
 
         case StellarEventType.DISPUTE_RESOLVED:
-          fields.escrowId = event.body.escrow_id || event.value?.escrow_id;
-          fields.reason = event.body.resolution || event.value?.resolution;
+          fields.escrowId = event.body?.escrow_id || event.value?.escrow_id;
+          fields.reason = event.body?.resolution || event.value?.resolution;
           break;
       }
     } catch (error) {
@@ -349,7 +399,7 @@ export class StellarEventListenerService implements OnModuleInit {
           break;
 
         case StellarEventType.MILESTONE_RELEASED:
-          await this.handleMilestoneReleased(event);
+          this.handleMilestoneReleased(event);
           break;
 
         case StellarEventType.ESCROW_COMPLETED:
@@ -365,11 +415,14 @@ export class StellarEventListenerService implements OnModuleInit {
           break;
 
         case StellarEventType.DISPUTE_RESOLVED:
-          await this.handleDisputeResolved(event);
+          this.handleDisputeResolved(event);
           break;
       }
     } catch (error) {
-      this.logger.error(`Error updating escrow from event ${event.eventType}:`, error);
+      this.logger.error(
+        `Error updating escrow from event ${event.eventType}:`,
+        error,
+      );
     }
   }
 
@@ -410,10 +463,12 @@ export class StellarEventListenerService implements OnModuleInit {
     }
   }
 
-  private async handleMilestoneReleased(event: StellarEvent) {
+  private handleMilestoneReleased(event: StellarEvent): void {
     // This would update milestone-specific data
     // For now, just log the event
-    this.logger.log(`Milestone released for escrow: ${event.escrowId}, milestone: ${event.milestoneIndex}`);
+    this.logger.log(
+      `Milestone released for escrow: ${event.escrowId}, milestone: ${event.milestoneIndex}`,
+    );
   }
 
   private async handleEscrowCompleted(event: StellarEvent) {
@@ -454,7 +509,7 @@ export class StellarEventListenerService implements OnModuleInit {
     }
   }
 
-  private async handleDisputeResolved(event: StellarEvent) {
+  private handleDisputeResolved(event: StellarEvent): void {
     // This would handle dispute resolution logic
     this.logger.log(`Dispute resolved for escrow: ${event.escrowId}`);
   }
@@ -469,16 +524,20 @@ export class StellarEventListenerService implements OnModuleInit {
     }
 
     this.reconnectAttempts++;
-    
+
     if (this.reconnectAttempts > this.maxReconnectAttempts) {
-      this.logger.error('Max reconnection attempts reached. Stopping event listener.');
+      this.logger.error(
+        'Max reconnection attempts reached. Stopping event listener.',
+      );
       this.isRunning = false;
       return;
     }
 
-    this.logger.warn(`Reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+    this.logger.warn(
+      `Reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`,
+    );
     await this.sleep(this.reconnectDelay);
-    
+
     try {
       await this.startEventListener();
       this.reconnectAttempts = 0; // Reset on successful reconnection
@@ -489,7 +548,7 @@ export class StellarEventListenerService implements OnModuleInit {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Public methods for external control
@@ -499,11 +558,11 @@ export class StellarEventListenerService implements OnModuleInit {
     await this.processNewEvents();
   }
 
-  async getSyncStatus(): Promise<{
+  getSyncStatus(): {
     isRunning: boolean;
     lastProcessedLedger: number;
     reconnectAttempts: number;
-  }> {
+  } {
     return {
       isRunning: this.isRunning,
       lastProcessedLedger: this.lastProcessedLedger,

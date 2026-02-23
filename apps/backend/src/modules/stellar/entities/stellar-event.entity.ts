@@ -49,10 +49,10 @@ export class StellarEvent {
   timestamp: Date;
 
   @Column({ type: 'json' })
-  rawPayload: Record<string, any>;
+  rawPayload: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   @Column({ type: 'json', nullable: true })
-  extractedFields?: Record<string, any>;
+  extractedFields?: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   @CreateDateColumn()
   createdAt: Date;
