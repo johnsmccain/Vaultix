@@ -9,6 +9,7 @@ import { EscrowModule } from './modules/escrow/escrow.module';
 import { StellarModule } from './modules/stellar/stellar.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
+import { StellarEventModule } from './modules/stellar/stellar-event.module';
 import { User } from './modules/user/entities/user.entity';
 import { RefreshToken } from './modules/user/entities/refresh-token.entity';
 import { Escrow } from './modules/escrow/entities/escrow.entity';
@@ -18,6 +19,7 @@ import { EscrowEvent } from './modules/escrow/entities/escrow-event.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EscrowModule } from './escrow/escrow.module';
 import { ApiKeyModule } from './api-key/api-key.module';
+import { StellarEvent } from './modules/stellar/entities/stellar-event.entity';
 
 @Module({
   imports: [
@@ -32,7 +34,15 @@ import { ApiKeyModule } from './api-key/api-key.module';
           'DATABASE_PATH',
           './data/vaultix.db',
         ),
-        entities: [User, RefreshToken, Escrow, Party, Condition, EscrowEvent],
+        entities: [
+          User,
+          RefreshToken,
+          Escrow,
+          Party,
+          Condition,
+          EscrowEvent,
+          StellarEvent,
+        ],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),
       inject: [ConfigService],
@@ -45,6 +55,7 @@ import { ApiKeyModule } from './api-key/api-key.module';
     WebhookModule,
     NotificationsModule,
     ApiKeyModule,
+    StellarEventModule,
   ],
   controllers: [AppController],
   providers: [AppService],
