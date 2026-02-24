@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -10,50 +10,37 @@ import {
   Wallet,
   X,
   Info,
-} from 'lucide-react';
-import { IEscrowExtended } from '@/types/escrow';
-import TransactionTracker from '@/components/stellar/TransactionTracker';
+} from "lucide-react";
+import { IEscrowExtended } from "@/types/escrow";
+import TransactionTracker from "@/components/stellar/TransactionTracker";
 
-type ReleaseMode = 'manual' | 'auto';
+type ReleaseMode = "manual" | "auto";
 
 interface ReleaseFundsModalProps {
   isOpen: boolean;
   onClose: () => void;
   escrow: IEscrowExtended;
-  /**
-   * How this release was initiated.
-   * - 'manual': buyer explicitly triggers release
-   * - 'auto': system triggered after conditions are met
-   * Used only for copy – backend handles actual semantics.
-   */
   releaseMode?: ReleaseMode;
-  /**
-   * Wallet connectivity is passed from the page/header so we keep a single source of truth.
-   */
   connected: boolean;
   connect: () => void;
   publicKey: string | null;
-  /**
-   * Optional Stellar network for the explorer link.
-   * Defaults to testnet which is what the demo environment uses.
-   */
-  network?: 'testnet' | 'public';
+  network?: "testnet" | "public";
 }
 
-type Step = 'review' | 'confirm' | 'success';
+type Step = "review" | "confirm" | "success";
 
-const PLATFORM_FEE_BPS = 50; // 0.5% – keep in sync with on-chain DEFAULT_FEE_BPS when possible
+const PLATFORM_FEE_BPS = 50;
 const BPS_DENOMINATOR = 10_000;
 
 export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
   isOpen,
   onClose,
   escrow,
-  releaseMode = 'manual',
+  releaseMode = "manual",
   connected,
   connect,
   publicKey,
-  network = 'testnet',
+  network = "testnet",
 }) => {
   if (!isOpen || !escrow) return null;
 
@@ -64,19 +51,17 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
 
   const isAlreadyReleased =
     Boolean(existingTxHash) ||
-    ['completed', 'released', 'COMPLETED', 'RELEASED'].includes(
-      escrow.status,
-    );
+    ["completed", "released", "COMPLETED", "RELEASED"].includes(escrow.status);
 
-  const [step, setStep] = useState<Step>(isAlreadyReleased ? 'success' : 'review');
+  const [step, setStep] = useState<Step>(
+    isAlreadyReleased ? "success" : "review",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(
-    existingTxHash ?? null,
-  );
+  const [txHash, setTxHash] = useState<string | null>(existingTxHash ?? null);
 
   const sellerAddress =
-    escrow.counterpartyAddress || (escrow as any).sellerAddress || 'Unknown';
+    escrow.counterpartyAddress || (escrow as any).sellerAddress || "Unknown";
   const buyerAddress =
     escrow.creatorAddress || (escrow.creator && escrow.creator.walletAddress);
 
@@ -95,8 +80,7 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
       return { feeAmount: null, recipientAmount: null };
     }
 
-    const fee =
-      (rawAmount * PLATFORM_FEE_BPS) / BPS_DENOMINATOR;
+    const fee = (rawAmount * PLATFORM_FEE_BPS) / BPS_DENOMINATOR;
     const recipient = rawAmount - fee;
 
     return {
@@ -114,19 +98,19 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
   const handleClose = () => {
     setError(null);
     setIsSubmitting(false);
-    setStep(isAlreadyReleased ? 'success' : 'review');
+    setStep(isAlreadyReleased ? "success" : "review");
     onClose();
   };
 
   const handlePrimaryAction = async () => {
-    if (step === 'review') {
-      setStep('confirm');
+    if (step === "review") {
+      setStep("confirm");
       return;
     }
 
-    if (step === 'confirm') {
+    if (step === "confirm") {
       if (!connected || !publicKey) {
-        setError('Connect your wallet before releasing funds.');
+        setError("Connect your wallet before releasing funds.");
         return;
       }
 
@@ -135,18 +119,18 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
 
       try {
         const response = await fetch(`/api/escrows/${escrow.id}/release`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         });
 
         if (!response.ok) {
           const data = await response
             .json()
-            .catch(() => ({ message: 'Failed to release funds' }));
+            .catch(() => ({ message: "Failed to release funds" }));
           throw new Error(
-            data.message || 'Failed to release funds. Please try again.',
+            data.message || "Failed to release funds. Please try again.",
           );
         }
 
@@ -159,12 +143,12 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
           setTxHash(data.transactionHash);
         }
 
-        setStep('success');
+        setStep("success");
       } catch (err) {
         setError(
           err instanceof Error
             ? err.message
-            : 'Failed to release funds. Please try again.',
+            : "Failed to release funds. Please try again.",
         );
       } finally {
         setIsSubmitting(false);
@@ -173,15 +157,14 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
   };
 
   const primaryLabel = (() => {
-    if (step === 'review') return 'Release funds';
-    if (step === 'confirm') return 'Confirm release';
-    return 'Done';
+    if (step === "review") return "Release funds";
+    if (step === "confirm") return "Confirm release";
+    return "Done";
   })();
 
-  const primaryDisabled =
-    isSubmitting || (!connected && step !== 'success');
+  const primaryDisabled = isSubmitting || (!connected && step !== "success");
 
-  const showTracker = step === 'success' && txHash;
+  const showTracker = step === "success" && txHash;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -190,14 +173,14 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-white">
-                {isAlreadyReleased || step === 'success'
-                  ? 'Funds released'
-                  : 'Release escrowed funds'}
+                {isAlreadyReleased || step === "success"
+                  ? "Funds released"
+                  : "Release escrowed funds"}
               </h2>
               <p className="text-emerald-100 text-sm mt-1">
-                {releaseMode === 'manual'
-                  ? 'Review the payout details before releasing funds to the seller.'
-                  : 'This escrow is eligible for auto-release. Review the details before the on-chain payout.'}
+                {releaseMode === "manual"
+                  ? "Review the payout details before releasing funds to the seller."
+                  : "This escrow is eligible for auto-release. Review the details before the on-chain payout."}
               </p>
             </div>
             <button
@@ -221,16 +204,16 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
             </div>
           )}
 
-          {!isAlreadyReleased && step !== 'success' && (
+          {!isAlreadyReleased && step !== "success" && (
             <div
               className={`p-4 rounded-lg border ${
-                step === 'confirm'
-                  ? 'bg-amber-50 border-amber-200'
-                  : 'bg-slate-50 border-slate-200'
+                step === "confirm"
+                  ? "bg-amber-50 border-amber-200"
+                  : "bg-slate-50 border-slate-200"
               }`}
             >
               <div className="flex items-start space-x-3">
-                {step === 'confirm' ? (
+                {step === "confirm" ? (
                   <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 ) : (
                   <Info className="w-5 h-5 text-slate-500 flex-shrink-0 mt-0.5" />
@@ -238,25 +221,21 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
                 <div>
                   <h4
                     className={`font-semibold ${
-                      step === 'confirm'
-                        ? 'text-amber-800'
-                        : 'text-slate-900'
+                      step === "confirm" ? "text-amber-800" : "text-slate-900"
                     }`}
                   >
-                    {step === 'confirm'
-                      ? 'Confirm on-chain release'
-                      : 'Review payout details'}
+                    {step === "confirm"
+                      ? "Confirm on-chain release"
+                      : "Review payout details"}
                   </h4>
                   <p
                     className={`text-sm mt-1 ${
-                      step === 'confirm'
-                        ? 'text-amber-700'
-                        : 'text-slate-600'
+                      step === "confirm" ? "text-amber-700" : "text-slate-600"
                     }`}
                   >
-                    {step === 'confirm'
-                      ? 'This will submit a blockchain transaction to release escrowed funds. This action cannot be undone.'
-                      : 'You are about to release escrowed funds to the seller. Confirm the amount, recipient, and fee before continuing.'}
+                    {step === "confirm"
+                      ? "This will submit a blockchain transaction to release escrowed funds. This action cannot be undone."
+                      : "You are about to release escrowed funds to the seller. Confirm the amount, recipient, and fee before continuing."}
                   </p>
                 </div>
               </div>
@@ -273,16 +252,11 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
                 <DollarSign className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm text-gray-500">Gross amount</p>
-                  <p className="font-medium text-gray-900">
-                    {formattedAmount}
-                  </p>
+                  <p className="font-medium text-gray-900">{formattedAmount}</p>
                   {recipientAmount && (
                     <p className="text-xs text-gray-500 mt-1">
-                      After fees, the seller receives{' '}
-                      <span className="font-medium">
-                        {recipientAmount}
-                      </span>
-                      .
+                      After fees, the seller receives{" "}
+                      <span className="font-medium">{recipientAmount}</span>.
                     </p>
                   )}
                 </div>
@@ -301,16 +275,14 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
               <div className="flex items-start space-x-3">
                 <Wallet className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500">
-                    Your connected wallet
-                  </p>
+                  <p className="text-sm text-gray-500">Your connected wallet</p>
                   {connected && publicKey ? (
                     <p className="font-mono text-sm text-gray-900 break-all">
                       {publicKey}
                     </p>
                   ) : (
                     <p className="text-sm text-gray-700">
-                      No wallet connected.{' '}
+                      No wallet connected.{" "}
                       <button
                         type="button"
                         className="underline text-emerald-700 font-medium"
@@ -335,8 +307,8 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
                       %)
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Based on the current on-chain configuration. The exact
-                      fee may differ slightly at execution time.
+                      Based on the current on-chain configuration. The exact fee
+                      may differ slightly at execution time.
                     </p>
                   </div>
                 </div>
@@ -344,7 +316,7 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
             </div>
           </div>
 
-          {step === 'success' && (
+          {step === "success" && (
             <div className="space-y-4">
               <div className="p-4 rounded-lg border border-emerald-200 bg-emerald-50 flex items-start space-x-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -362,7 +334,7 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
               {txHash && (
                 <div className="space-y-2">
                   <p className="text-sm text-gray-700">
-                    <span className="font-medium">Transaction hash:</span>{' '}
+                    <span className="font-medium">Transaction hash:</span>{" "}
                     <span className="font-mono break-all">{txHash}</span>
                   </p>
                   <TransactionTracker
@@ -382,18 +354,18 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
               disabled={isSubmitting}
               className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {step === 'success' ? 'Close' : 'Cancel'}
+              {step === "success" ? "Close" : "Cancel"}
             </button>
             <button
               type="button"
               onClick={handlePrimaryAction}
               disabled={primaryDisabled}
               className={`flex-1 px-4 py-2.5 font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                step === 'success'
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500'
-                  : step === 'confirm'
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
+                step === "success"
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500"
+                  : step === "confirm"
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500"
+                    : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
               }`}
             >
               {isSubmitting ? (
@@ -413,4 +385,3 @@ export const ReleaseFundsModal: React.FC<ReleaseFundsModalProps> = ({
 };
 
 export default ReleaseFundsModal;
-
