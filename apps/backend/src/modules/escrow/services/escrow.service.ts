@@ -14,6 +14,7 @@ import { CreateEscrowDto } from '../dto/create-escrow.dto';
 import { UpdateEscrowDto } from '../dto/update-escrow.dto';
 import { ListEscrowsDto, SortOrder } from '../dto/list-escrows.dto';
 import { CancelEscrowDto } from '../dto/cancel-escrow.dto';
+import { FulfillConditionDto } from '../dto/fulfill-condition.dto';
 import { validateTransition, isTerminalStatus } from '../escrow-state-machine';
 import { EscrowStellarIntegrationService } from './escrow-stellar-integration.service';
 import { WebhookService } from '../../../services/webhook/webhook.service';
@@ -315,12 +316,113 @@ export class EscrowService {
     return escrow;
   }
 
+  async fulfillCondition(
+    escrowId: string,
+    conditionId: string,
+    dto: FulfillConditionDto,
+    userId: string,
+    ipAddress?: string,
+  ): Promise<Condition> {
+    const escrow = await this.escrowRepository.findOne({
+      where: { id: escrowId },
+      relations: ['parties', 'conditions'],
+    });
+
+    if (!escrow) {
+      throw new NotFoundException('Escrow not found');
+    }
+
+    if (escrow.status !== EscrowStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Escrow must be active to fulfill conditions',
+      );
+    }
+
+    // Check if user is a seller
+    const sellerParty = escrow.parties?.find(
+      (p) => p.role === PartyRole.SELLER && p.userId === userId,
+    );
+
+    if (!sellerParty) {
+      throw new ForbiddenException('Only sellers can fulfill conditions');
+    }
+
+    const condition = await this.conditionRepository.findOne({
+      where: { id: conditionId, escrowId },
+      relations: ['escrow'],
+    });
+
+    if (!condition) {
+      throw new NotFoundException('Condition not found');
+    }
+
+    if (condition.isFulfilled) {
+      return condition; // idempotent
+    }
+
+    // Mark condition as fulfilled by seller
+    condition.isFulfilled = true;
+    condition.fulfilledAt = new Date();
+    condition.fulfilledByUserId = userId;
+    condition.fulfillmentNotes = dto.notes;
+    condition.fulfillmentEvidence = dto.evidence;
+
+    await this.conditionRepository.save(condition);
+
+    await this.logEvent(
+      escrowId,
+      EscrowEventType.CONDITION_FULFILLED,
+      userId,
+      {
+        conditionId,
+        notes: dto.notes,
+        evidence: dto.evidence,
+      },
+      ipAddress,
+    );
+
+    // Dispatch webhook for condition fulfillment
+    await this.webhookService.dispatchEvent('condition.fulfilled', {
+      escrowId,
+      conditionId,
+      fulfilledBy: userId,
+    });
+
+    return condition;
+  }
+
   async confirmCondition(
+    escrowId: string,
     conditionId: string,
     userId: string,
+    ipAddress?: string,
   ): Promise<Condition> {
+    const escrow = await this.escrowRepository.findOne({
+      where: { id: escrowId },
+      relations: ['parties', 'conditions'],
+    });
+
+    if (!escrow) {
+      throw new NotFoundException('Escrow not found');
+    }
+
+    if (escrow.status !== EscrowStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Escrow must be active to confirm conditions',
+      );
+    }
+
+    // Check if user is a buyer
+    const buyerParty = escrow.parties?.find(
+      (p) => p.role === PartyRole.BUYER && p.userId === userId,
+    );
+
+    if (!buyerParty) {
+      throw new ForbiddenException('Only buyers can confirm conditions');
+    }
+
     const condition = await this.conditionRepository.findOne({
-      where: { id: conditionId },
+      where: { id: conditionId, escrowId },
       relations: ['escrow', 'escrow.conditions'],
     });
 
@@ -328,20 +430,35 @@ export class EscrowService {
       throw new NotFoundException('Condition not found');
     }
 
+    if (!condition.isFulfilled) {
+      throw new BadRequestException(
+        'Condition must be fulfilled before it can be confirmed',
+      );
+    }
+
     if (condition.isMet) {
       return condition; // idempotent
     }
 
-    // Mark condition as met
+    // Mark condition as confirmed by buyer
     condition.isMet = true;
     condition.metAt = new Date();
     condition.metByUserId = userId;
 
     await this.conditionRepository.save(condition);
 
-    const escrow = condition.escrow;
+    await this.logEvent(
+      escrowId,
+      EscrowEventType.CONDITION_MET,
+      userId,
+      {
+        conditionId,
+        confirmedBy: userId,
+      },
+      ipAddress,
+    );
 
-    // 🔥 AUTO RELEASE CHECK
+    // Check if all conditions are now met for auto-release
     const allConditionsMet = escrow.conditions.every((c) =>
       c.id === condition.id ? true : c.isMet,
     );
@@ -353,6 +470,14 @@ export class EscrowService {
         false, // auto release
       );
     }
+
+    // Dispatch webhook for condition confirmation
+    await this.webhookService.dispatchEvent('condition.confirmed', {
+      escrowId,
+      conditionId,
+      confirmedBy: userId,
+      allConditionsMet,
+    });
 
     return condition;
   }
