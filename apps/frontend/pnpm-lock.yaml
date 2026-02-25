@@ -17,9 +17,12 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.20
         version: 5.90.21(react@19.1.0)
+<<<<<<< HEAD
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
+=======
+>>>>>>> 2634164035642d5435980d277c349d03138b4d39
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -1418,9 +1421,12 @@ packages:
     peerDependencies:
       react: ^18 || ^19
 
+<<<<<<< HEAD
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
 
+=======
+>>>>>>> 2634164035642d5435980d277c349d03138b4d39
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
@@ -5369,12 +5375,15 @@ snapshots:
       '@tanstack/query-core': 5.90.20
       react: 19.1.0
 
+<<<<<<< HEAD
   '@ts-morph/common@0.27.0':
     dependencies:
       fast-glob: 3.3.3
       minimatch: 10.2.2
       path-browserify: 1.0.1
 
+=======
+>>>>>>> 2634164035642d5435980d277c349d03138b4d39
   '@tybys/wasm-util@0.10.1':
     dependencies:
       tslib: 2.8.1
