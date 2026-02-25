@@ -295,39 +295,50 @@ describe('EscrowService', () => {
 
   describe('fund', () => {
     const walletAddress = 'GABC123';
-
+  
     it('should fund escrow when creator and amount match', async () => {
+      const fundedAt = new Date();
+  
       escrowRepository.findOne
         .mockResolvedValueOnce({ ...mockEscrow, amount: 100 } as Escrow)
         .mockResolvedValueOnce({
           ...mockEscrow,
           status: EscrowStatus.ACTIVE,
           stellarTxHash: 'mock-fund-tx-hash',
-          fundedAt: expect.any(Date),
+          fundedAt,
         } as Escrow);
+  
       escrowRepository.update.mockResolvedValue({ affected: 1 } as UpdateResult);
       eventRepository.create.mockReturnValue({} as EscrowEvent);
       eventRepository.save.mockResolvedValue({} as EscrowEvent);
-
-      const result = await service.fund(
+  
+      const result: Escrow = await service.fund(
         'escrow-123',
         { amount: 100 },
         'user-123',
         walletAddress,
       );
-
-      expect(escrowRepository.update).toHaveBeenCalledWith('escrow-123', {
-        stellarTxHash: 'mock-fund-tx-hash',
-        fundedAt: expect.any(Date),
-        status: EscrowStatus.ACTIVE,
-      });
+  
+      expect(escrowRepository.update).toHaveBeenCalledTimes(1);
+  
+      const updateCall = escrowRepository.update.mock.calls[0][1];
+  
+      expect(updateCall).toEqual(
+        expect.objectContaining({
+          stellarTxHash: 'mock-fund-tx-hash',
+          status: EscrowStatus.ACTIVE,
+        }),
+      );
+  
+      expect(updateCall.fundedAt).toBeInstanceOf(Date);
+  
       expect(eventRepository.save).toHaveBeenCalled();
       expect(result.status).toBe(EscrowStatus.ACTIVE);
     });
-
+  
     it('should throw ForbiddenException when non-buyer attempts to fund', async () => {
       escrowRepository.findOne.mockResolvedValue(mockEscrow as Escrow);
-
+  
       await expect(
         service.fund(
           'escrow-123',
@@ -337,13 +348,13 @@ describe('EscrowService', () => {
         ),
       ).rejects.toThrow(ForbiddenException);
     });
-
+  
     it('should throw BadRequestException when status is not pending', async () => {
       escrowRepository.findOne.mockResolvedValue({
         ...mockEscrow,
         status: EscrowStatus.ACTIVE,
       } as Escrow);
-
+  
       await expect(
         service.fund(
           'escrow-123',
@@ -353,13 +364,13 @@ describe('EscrowService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
     });
-
+  
     it('should throw BadRequestException when amount does not match', async () => {
       escrowRepository.findOne.mockResolvedValue({
         ...mockEscrow,
         amount: 100,
       } as Escrow);
-
+  
       await expect(
         service.fund(
           'escrow-123',
@@ -369,13 +380,13 @@ describe('EscrowService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
     });
-
+  
     it('should throw BadRequestException when already funded', async () => {
       escrowRepository.findOne.mockResolvedValue({
         ...mockEscrow,
         stellarTxHash: 'existing-hash',
       } as Escrow);
-
+  
       await expect(
         service.fund(
           'escrow-123',
