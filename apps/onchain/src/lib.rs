@@ -5,6 +5,30 @@ use soroban_sdk::{
     Vec,
 };
 
+impl VaultixEscrow {
+    /// Secure contract upgrade function (Admin Proxy).
+    /// WARNING: Future upgrades MUST preserve storage layout (structs, enums, keys) to avoid corrupting state.
+    /// Only admin can call. Emits ContractUpgraded event before upgrade.
+    pub fn upgrade(env: Env, new_wasm_hash: [u8; 32]) -> Result<(), Error> {
+        let admin = get_admin(&env)?;
+        admin.require_auth();
+
+        let hash_bytes = soroban_sdk::BytesN::<32>::from_array(&env, &new_wasm_hash);
+
+        // Emit ContractUpgraded event
+        env.events().publish(
+            (
+                Symbol::new(&env, "Vaultix"),
+                Symbol::new(&env, "ContractUpgraded"),
+            ),
+            hash_bytes.clone(),
+        );
+
+        env.deployer().update_current_contract_wasm(hash_bytes);
+        Ok(())
+    }
+}
+
 #[contracttype]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MilestoneStatus {
